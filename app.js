@@ -12,7 +12,7 @@ const swaggerUI = require('swagger-ui-express');
 const swaggerDocument = require('./docs/openapi.json');
 
 var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+var usersRouter = require('./routes/user');
 
 var app = express();
 
@@ -32,7 +32,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use('/user', usersRouter);
 app.get("/knex", function (req, res, next) {
   req.db.raw("SELECT VERSION()")
     .then((version) => console.log(version[0][0]))
