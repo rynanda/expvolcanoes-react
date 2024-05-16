@@ -1,6 +1,8 @@
 var express = require('express');
 var router = express.Router();
 
+const jwt = require('jsonwebtoken');
+
 /* GET home page. */
 router.get('/', function (req, res, next) {
   res.render('index', { title: 'Express' });
@@ -87,24 +89,56 @@ router.get('/volcanoes', function (req, res, next) {
 router.get('/volcano/:id', function (req, res, next) {
   const queries = Object.keys(req.query);
 
-  if (queries.length === 0) {
-    req.db
-      .from("data")
-      .select("id", "name", "country", "region", "subregion", "last_eruption", "summit",
-        "elevation", "latitude", "longitude", "population_5km",
-        "population_10km", "population_30km", "population_100km")
-      .where("id", "=", req.params.id)
-      .then((rows) => {
-        if (rows.length > 0) {
-          res.status(200).json(rows);
-        } else {
-          res.status(404).json({error: true, message: `Volcano with ID: ${req.params.id} not found.`});
-        }
-      })
-  } else {
-    res.status(400).json({ error: true, message: "Invalid query parameters. Query parameters are not permitted." })
+  if (!req.headers.authorization) {
+    if (queries.length === 0) {
+      req.db
+        .from("data")
+        .select("id", "name", "country", "region", "subregion", "last_eruption", "summit",
+          "elevation", "latitude", "longitude")
+        .where("id", "=", req.params.id)
+        .then((rows) => {
+          if (rows.length > 0) {
+            res.status(200).json(rows);
+          } else {
+            res.status(404).json({ error: true, message: `Volcano with ID: ${req.params.id} not found.` });
+          }
+        })
+    } else {
+      res.status(400).json({ error: true, message: "Invalid query parameters. Query parameters are not permitted." })
+    }
   }
+  else {
+    if (req.headers.authorization.match(/^Bearer /)) {
+      const token = req.headers.authorization.replace(/^Bearer /, "");
 
+      try {
+        jwt.verify(token, process.env.JWT_SECRET);
+      } catch (e) {
+        res.status(401).json({ error: true, message: "Invalid JWT token" });
+        return;
+      }
+
+      if (queries.length === 0) {
+        req.db
+          .from("data")
+          .select("id", "name", "country", "region", "subregion", "last_eruption", "summit",
+            "elevation", "latitude", "longitude", "population_5km",
+            "population_10km", "population_30km", "population_100km")
+          .where("id", "=", req.params.id)
+          .then((rows) => {
+            if (rows.length > 0) {
+              res.status(200).json(rows);
+            } else {
+              res.status(404).json({ error: true, message: `Volcano with ID: ${req.params.id} not found.` });
+            }
+          })
+      } else {
+        res.status(400).json({ error: true, message: "Invalid query parameters. Query parameters are not permitted." })
+      }
+    } else {
+      res.status(401).json({ error: true, message: "Invalid JWT token" });
+    }
+  }
 })
 
 router.get('/me', function (req, res, next) {
