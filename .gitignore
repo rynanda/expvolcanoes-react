@@ -1,0 +1,2 @@
+// Ignore .env (includes JWT_SECRET for signing/verifying JWTs)
+.env
