@@ -90,4 +90,159 @@ router.post('/register', function (req, res, next) {
     })
 })
 
+router.get('/:email/profile', function (req, res, next) {
+  const email = req.params.email;
+
+  if (!req.headers.authorization) {
+    const queryUser = req.db.from("users").select("email", "firstName", "lastName").where("email", "=", email);
+    queryUser.then(users => {
+      if (users.length === 0) {
+        throw new Error("User not found");
+      } else {
+        res.status(200).json(users[0]);
+      }
+    })
+      .catch(e => {
+        if (e.message === "User not found") {
+          res.status(404).json({ error: true, message: e.message });
+        }
+      });
+  } else {
+    if (req.headers.authorization.match(/^Bearer /)) {
+      const token = req.headers.authorization.replace(/^Bearer /, "");
+
+      try {
+        if (token.startsWith('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9')) {
+          jwt.verify(token, process.env.JWT_SECRET);
+        } else {
+          throw new Error("Authorization header is malformed");
+        }
+      } catch (e) {
+        if (e.name === "TokenExpiredError") {
+          res.status(401).json({ error: true, message: "JWT token has expired" });
+        } else if (e.message === "Authorization header is malformed") {
+          res.status(401).json({ error: true, message: e.message });
+        }
+        else {
+          res.status(401).json({ error: true, message: "Invalid JWT token" });
+        }
+        return;
+      }
+
+      if (jwt.decode(token).email === email) {
+        const queryUser = req.db.from("users").select("email", "firstName", "lastName", "dob", "address").where("email", "=", email);
+
+        queryUser.then(users => {
+          if (users.length === 0) {
+            throw new Error("User not found");
+          } else {
+            res.status(200).json(users[0]);
+          }
+        })
+          .catch(e => {
+            if (e.message === "User not found") {
+              res.status(404).json({ error: true, message: e.message });
+            }
+          });
+      } else {
+        const queryUser = req.db.from("users").select("email", "firstName", "lastName").where("email", "=", email);
+
+        queryUser.then(users => {
+          if (users.length === 0) {
+            throw new Error("User not found");
+          } else {
+            res.status(200).json(users[0]);
+          }
+        })
+          .catch(e => {
+            if (e.message === "User not found") {
+              res.status(404).json({ error: true, message: e.message });
+            }
+          });
+      }
+    }
+  }
+})
+
+router.put('/:email/profile', function (req, res, next) {
+  const email = req.params.email;
+  const firstName = req.body.firstName;
+  const lastName = req.body.lastName;
+  const dob = req.body.dob;
+  const address = req.body.address;
+
+  if (typeof firstName !== "string" || typeof lastName !== "string" || typeof address !== "string") {
+    if (!firstName || !lastName || !dob || !address) {
+      res.status(400).json({ error: true, message: "Request body incomplete: firstName, lastName, dob and address are required." });
+      return;
+    }
+    res.status(400).json({ error: true, message: "Request body invalid: firstName, lastName and address must be strings only." })
+    return;
+  }
+
+  const testDate = new Date(dob);
+
+  // https://stackoverflow.com/questions/10073699/pad-a-number-with-leading-zeros-in-javascript
+  const testedDob = `${testDate.getFullYear()}-${String(testDate.getMonth() + 1).padStart(2, '0')}-${String(testDate.getDate()).padStart(2, '0')}`;
+
+  // Check if date is valid - regex match adapted from https://stackoverflow.com/questions/18758772/how-do-i-validate-a-date-in-this-format-yyyy-mm-dd-using-jquery
+  if (isNaN(testDate) || !dob.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    res.status(400).json({ error: true, message: "Invalid input: dob must be a real date in format YYYY-MM-DD." });
+    return;
+  } else if (testDate.getTime() > Date.now()) {
+    res.status(400).json({ error: true, message: "Invalid input: dob must be a date in the past." });
+    return;
+  } else if (testDate.getMonth() > 13 || testDate.getDate() > 31) {
+    res.status(400).json({ error: true, message: "Invalid input: dob must be a real date in format YYYY-MM-DD." });
+    return;
+  } else if (dob !== testedDob) {
+    res.status(400).json({ error: true, message: "Invalid input: dob must be a real date in format YYYY-MM-DD." });
+    return;
+  }
+
+  if (!req.headers.authorization) {
+    res.status(401).json({ error: true, message: "Authorization header ('Bearer token') not found" })
+  } else {
+    if (req.headers.authorization.match(/^Bearer /)) {
+      const token = req.headers.authorization.replace(/^Bearer /, "");
+
+      try {
+        if (token.startsWith('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9')) {
+          jwt.verify(token, process.env.JWT_SECRET);
+          if (jwt.decode(token).email !== email) {
+            res.status(403).json({ error: true, message: "Forbidden" })
+            return;
+          }
+        } else {
+          throw new Error("Authorization header is malformed");
+        }
+      } catch (e) {
+        if (e.name === "TokenExpiredError") {
+          res.status(401).json({ error: true, message: "JWT token has expired" });
+        } else if (e.message === "Authorization header is malformed") {
+          res.status(401).json({ error: true, message: e.message });
+        }
+        else {
+          res.status(401).json({ error: true, message: "Invalid JWT token" });
+        }
+        return;
+      }
+
+      const queryUser = req.db.from("users").select("email", "firstName", "lastName", "dob", "address").where("email", "=", email);
+      queryUser.update({
+        firstName: firstName,
+        lastName: lastName,
+        dob: testedDob,
+        address: address
+      })
+        .then(() => {
+          return req.db.from("users").select("email", "firstName", "lastName", "dob", "address").where("email", "=", email)
+        })
+        .then((user) => {
+          res.status(200).json(user[0]);
+        })
+    }
+  }
+})
+
 module.exports = router;
