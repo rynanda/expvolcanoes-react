@@ -1,12 +1,17 @@
 var express = require('express');
 var router = express.Router();
 
+
+const swaggerUI = require('swagger-ui-express');
+const swaggerDocument = require('../docs/openapi.json');
 const jwt = require('jsonwebtoken');
 
 /* GET home page. */
-router.get('/', function (req, res, next) {
-  res.render('index', { title: 'Express' });
-});
+// router.get('/', function (req, res, next) {
+//   res.render('index', { title: 'Express' });
+// });
+
+router.get('/', swaggerUI.serve, swaggerUI.setup(swaggerDocument));
 
 router.get('/countries', function (req, res, next) {
   req.db
@@ -14,8 +19,8 @@ router.get('/countries', function (req, res, next) {
     .select("country")
     .orderBy("country", "asc")
     .distinct("country")
-    .then((rows) => {
-      const countries = rows.map((row) => row.country);
+    .then((countriesData) => {
+      const countries = countriesData.map((row) => row.country);
       res.status(200).json(countries);
     })
     .catch((err) => {
@@ -41,43 +46,40 @@ router.get('/volcanoes', function (req, res, next) {
       error: true, message: "Invalid query parameters. Only country and populatedWithin are permitted."
     });
   } else if (!country && !popWithin) {
-    queryVolcanoes
-      .then((rows) => {
-        res.status(200).json(rows);
-      });
+    res.status(400).json({ error: true, message: "Invalid query parameters. Country is a required parameter." })
   } else if (country && !popWithin) {
     queryVolcanoes
       .where("country", "=", country)
-      .then((rows) => {
-        res.status(200).json(rows);
+      .then((volcanoes) => {
+        res.status(200).json(volcanoes);
       });
   } else if (country && (popWithin === "5km")) {
     queryVolcanoes
       .where("country", "=", country)
       .where("population_5km", ">", 0)
-      .then((rows) => {
-        res.status(200).json(rows);
+      .then((volcanoes) => {
+        res.status(200).json(volcanoes);
       });
   } else if (country && (popWithin === "10km")) {
     queryVolcanoes
       .where("country", "=", country)
       .where("population_10km", ">", 0)
-      .then((rows) => {
-        res.status(200).json(rows);
+      .then((volcanoes) => {
+        res.status(200).json(volcanoes);
       });
   } else if (country && (popWithin === "30km")) {
     queryVolcanoes
       .where("country", "=", country)
       .where("population_30km", ">", 0)
-      .then((rows) => {
-        res.status(200).json(rows);
+      .then((volcanoes) => {
+        res.status(200).json(volcanoes);
       });
   } else if (country && (popWithin === "100km")) {
     queryVolcanoes
       .where("country", "=", country)
       .where("population_100km", ">", 0)
-      .then((rows) => {
-        res.status(200).json(rows);
+      .then((volcanoes) => {
+        res.status(200).json(volcanoes);
       });
   } else if (!country && popWithin) {
     res.status(400).json({ error: true, message: "Country is a required query parameter." })
@@ -96,9 +98,9 @@ router.get('/volcano/:id', function (req, res, next) {
         .select("id", "name", "country", "region", "subregion", "last_eruption", "summit",
           "elevation", "latitude", "longitude")
         .where("id", "=", req.params.id)
-        .then((rows) => {
-          if (rows.length > 0) {
-            res.status(200).json(rows);
+        .then((volcano) => {
+          if (volcano.length > 0) {
+            res.status(200).json(volcano[0]);
           } else {
             res.status(404).json({ error: true, message: `Volcano with ID: ${req.params.id} not found.` });
           }
@@ -125,9 +127,9 @@ router.get('/volcano/:id', function (req, res, next) {
             "elevation", "latitude", "longitude", "population_5km",
             "population_10km", "population_30km", "population_100km")
           .where("id", "=", req.params.id)
-          .then((rows) => {
-            if (rows.length > 0) {
-              res.status(200).json(rows);
+          .then((volcano) => {
+            if (volcano.length > 0) {
+              res.status(200).json(volcano[0]);
             } else {
               res.status(404).json({ error: true, message: `Volcano with ID: ${req.params.id} not found.` });
             }
@@ -136,7 +138,7 @@ router.get('/volcano/:id', function (req, res, next) {
         res.status(400).json({ error: true, message: "Invalid query parameters. Query parameters are not permitted." })
       }
     } else {
-      res.status(401).json({ error: true, message: "Invalid JWT token" });
+      res.status(401).json({ error: true, message: "Authorization header is malformed" });
     }
   }
 })
