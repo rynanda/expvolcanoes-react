@@ -41,6 +41,7 @@ router.get('/volcanoes', function (req, res, next) {
 
   const queryVolcanoes = req.db.from("data").select("id", "name", "country", "region", "subregion");
 
+  // https://stackoverflow.com/questions/8217419/how-to-determine-if-a-javascript-array-contains-an-object-with-an-attribute-that
   if (queries.some(query => !validQueries.includes(query))) {
     res.status(400).json({
       error: true, message: "Invalid query parameters. Only country and populatedWithin are permitted."
@@ -53,31 +54,10 @@ router.get('/volcanoes', function (req, res, next) {
       .then((volcanoes) => {
         res.status(200).json(volcanoes);
       });
-  } else if (country && (popWithin === "5km")) {
+  } else if (country && (validPopWithin.includes(popWithin))) {
     queryVolcanoes
       .where("country", "=", country)
-      .where("population_5km", ">", 0)
-      .then((volcanoes) => {
-        res.status(200).json(volcanoes);
-      });
-  } else if (country && (popWithin === "10km")) {
-    queryVolcanoes
-      .where("country", "=", country)
-      .where("population_10km", ">", 0)
-      .then((volcanoes) => {
-        res.status(200).json(volcanoes);
-      });
-  } else if (country && (popWithin === "30km")) {
-    queryVolcanoes
-      .where("country", "=", country)
-      .where("population_30km", ">", 0)
-      .then((volcanoes) => {
-        res.status(200).json(volcanoes);
-      });
-  } else if (country && (popWithin === "100km")) {
-    queryVolcanoes
-      .where("country", "=", country)
-      .where("population_100km", ">", 0)
+      .where(`population_${popWithin}`, ">", 0)
       .then((volcanoes) => {
         res.status(200).json(volcanoes);
       });
