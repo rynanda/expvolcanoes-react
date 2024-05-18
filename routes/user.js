@@ -55,7 +55,7 @@ router.post('/login', function (req, res, next) {
         res.status(401).json({ error: true, message: e.message });
       }
     });
-})
+});
 
 router.post('/register', function (req, res, next) {
   const email = req.body.email;
@@ -87,8 +87,8 @@ router.post('/register', function (req, res, next) {
       if (e.message === "User already exists") {
         res.status(409).json({ error: true, message: e.message });
       }
-    })
-})
+    });
+});
 
 router.get('/:email/profile', function (req, res, next) {
   const email = req.params.email;
@@ -108,15 +108,12 @@ router.get('/:email/profile', function (req, res, next) {
         }
       });
   } else {
-    if (req.headers.authorization.match(/^Bearer /)) {
+    // https://www.w3schools.com/jsref/jsref_regexp_test.asp
+    if (/^Bearer /.test(req.headers.authorization)) {
       const token = req.headers.authorization.replace(/^Bearer /, "");
 
       try {
-        if (token.startsWith('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9')) {
-          jwt.verify(token, process.env.JWT_SECRET);
-        } else {
-          throw new Error("Authorization header is malformed");
-        }
+        jwt.verify(token, process.env.JWT_SECRET);
       } catch (e) {
         if (e.name === "TokenExpiredError") {
           res.status(401).json({ error: true, message: "JWT token has expired" });
@@ -160,6 +157,8 @@ router.get('/:email/profile', function (req, res, next) {
             }
           });
       }
+    } else {
+      res.status(401).json({ error: true, message: "Authorization header is malformed" });
     }
   }
 })
@@ -176,45 +175,37 @@ router.put('/:email/profile', function (req, res, next) {
       res.status(400).json({ error: true, message: "Request body incomplete: firstName, lastName, dob and address are required." });
       return;
     }
-    res.status(400).json({ error: true, message: "Request body invalid: firstName, lastName and address must be strings only." })
+    res.status(400).json({ error: true, message: "Request body invalid: firstName, lastName and address must be strings only." });
     return;
   }
 
+  // https://www.w3schools.com/js/js_dates.asp
   const testDate = new Date(dob);
 
   // https://stackoverflow.com/questions/10073699/pad-a-number-with-leading-zeros-in-javascript
   const testedDob = `${testDate.getFullYear()}-${String(testDate.getMonth() + 1).padStart(2, '0')}-${String(testDate.getDate()).padStart(2, '0')}`;
 
   // Check if date is valid - regex match adapted from https://stackoverflow.com/questions/18758772/how-do-i-validate-a-date-in-this-format-yyyy-mm-dd-using-jquery
-  if (isNaN(testDate) || !dob.match(/^\d{4}-\d{2}-\d{2}$/)) {
+  if (isNaN(testDate) || !dob.match(/^\d{4}-\d{2}-\d{2}$/) || testDate.getMonth() > 13 || testDate.getDate() > 31 || dob !== testedDob) {
     res.status(400).json({ error: true, message: "Invalid input: dob must be a real date in format YYYY-MM-DD." });
     return;
   } else if (testDate.getTime() > Date.now()) {
     res.status(400).json({ error: true, message: "Invalid input: dob must be a date in the past." });
-    return;
-  } else if (testDate.getMonth() > 13 || testDate.getDate() > 31) {
-    res.status(400).json({ error: true, message: "Invalid input: dob must be a real date in format YYYY-MM-DD." });
-    return;
-  } else if (dob !== testedDob) {
-    res.status(400).json({ error: true, message: "Invalid input: dob must be a real date in format YYYY-MM-DD." });
     return;
   }
 
   if (!req.headers.authorization) {
     res.status(401).json({ error: true, message: "Authorization header ('Bearer token') not found" })
   } else {
-    if (req.headers.authorization.match(/^Bearer /)) {
+    if (/^Bearer /.test(req.headers.authorization)) {
       const token = req.headers.authorization.replace(/^Bearer /, "");
 
       try {
-        if (token.startsWith('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9')) {
-          jwt.verify(token, process.env.JWT_SECRET);
-          if (jwt.decode(token).email !== email) {
-            res.status(403).json({ error: true, message: "Forbidden" })
-            return;
-          }
-        } else {
-          throw new Error("Authorization header is malformed");
+        // https://stackoverflow.com/questions/68024844/how-can-get-the-property-from-result-of-jwt-verify-method-that-was-already-cre
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded.email !== email) {
+          res.status(403).json({ error: true, message: "Forbidden" });
+          return;
         }
       } catch (e) {
         if (e.name === "TokenExpiredError") {
@@ -236,13 +227,15 @@ router.put('/:email/profile', function (req, res, next) {
         address: address
       })
         .then(() => {
-          return req.db.from("users").select("email", "firstName", "lastName", "dob", "address").where("email", "=", email)
+          return req.db.from("users").select("email", "firstName", "lastName", "dob", "address").where("email", "=", email);
         })
         .then((user) => {
           res.status(200).json(user[0]);
         })
+    } else {
+      res.status(401).json({ error: true, message: "Authorization header is malformed" });
     }
   }
-})
+});
 
 module.exports = router;
