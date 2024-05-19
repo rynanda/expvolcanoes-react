@@ -3,7 +3,8 @@ var router = express.Router();
 
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcrypt');
+const authorization = require('../middleware/authorization');
 
 /* GET users listing. */
 router.get('/', function (req, res, next) {
@@ -90,7 +91,7 @@ router.post('/register', function (req, res, next) {
     });
 });
 
-router.get('/:email/profile', function (req, res, next) {
+router.get('/:email/profile', authorization, function (req, res, next) {
   const email = req.params.email;
 
   if (!req.headers.authorization) {
@@ -108,62 +109,41 @@ router.get('/:email/profile', function (req, res, next) {
         }
       });
   } else {
-    // https://www.w3schools.com/jsref/jsref_regexp_test.asp
-    if (/^Bearer /.test(req.headers.authorization)) {
-      const token = req.headers.authorization.replace(/^Bearer /, "");
+    if (req.email === email) {
+      const queryUser = req.db.from("users").select("email", "firstName", "lastName", "dob", "address").where("email", "=", email);
 
-      try {
-        jwt.verify(token, process.env.JWT_SECRET);
-      } catch (e) {
-        if (e.name === "TokenExpiredError") {
-          res.status(401).json({ error: true, message: "JWT token has expired" });
-        } else if (e.message === "Authorization header is malformed") {
-          res.status(401).json({ error: true, message: e.message });
+      queryUser.then(users => {
+        if (users.length === 0) {
+          throw new Error("User not found");
+        } else {
+          res.status(200).json(users[0]);
         }
-        else {
-          res.status(401).json({ error: true, message: "Invalid JWT token" });
-        }
-        return;
-      }
-
-      if (jwt.decode(token).email === email) {
-        const queryUser = req.db.from("users").select("email", "firstName", "lastName", "dob", "address").where("email", "=", email);
-
-        queryUser.then(users => {
-          if (users.length === 0) {
-            throw new Error("User not found");
-          } else {
-            res.status(200).json(users[0]);
+      })
+        .catch(e => {
+          if (e.message === "User not found") {
+            res.status(404).json({ error: true, message: e.message });
           }
-        })
-          .catch(e => {
-            if (e.message === "User not found") {
-              res.status(404).json({ error: true, message: e.message });
-            }
-          });
-      } else {
-        const queryUser = req.db.from("users").select("email", "firstName", "lastName").where("email", "=", email);
-
-        queryUser.then(users => {
-          if (users.length === 0) {
-            throw new Error("User not found");
-          } else {
-            res.status(200).json(users[0]);
-          }
-        })
-          .catch(e => {
-            if (e.message === "User not found") {
-              res.status(404).json({ error: true, message: e.message });
-            }
-          });
-      }
+        });
     } else {
-      res.status(401).json({ error: true, message: "Authorization header is malformed" });
+      const queryUser = req.db.from("users").select("email", "firstName", "lastName").where("email", "=", email);
+
+      queryUser.then(users => {
+        if (users.length === 0) {
+          throw new Error("User not found");
+        } else {
+          res.status(200).json(users[0]);
+        }
+      })
+        .catch(e => {
+          if (e.message === "User not found") {
+            res.status(404).json({ error: true, message: e.message });
+          }
+        });
     }
   }
 })
 
-router.put('/:email/profile', function (req, res, next) {
+router.put('/:email/profile', authorization, function (req, res, next) {
   const email = req.params.email;
   const firstName = req.body.firstName;
   const lastName = req.body.lastName;
@@ -197,44 +177,24 @@ router.put('/:email/profile', function (req, res, next) {
   if (!req.headers.authorization) {
     res.status(401).json({ error: true, message: "Authorization header ('Bearer token') not found" })
   } else {
-    if (/^Bearer /.test(req.headers.authorization)) {
-      const token = req.headers.authorization.replace(/^Bearer /, "");
-
-      try {
-        // https://stackoverflow.com/questions/68024844/how-can-get-the-property-from-result-of-jwt-verify-method-that-was-already-cre
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        if (decoded.email !== email) {
-          res.status(403).json({ error: true, message: "Forbidden" });
-          return;
-        }
-      } catch (e) {
-        if (e.name === "TokenExpiredError") {
-          res.status(401).json({ error: true, message: "JWT token has expired" });
-        } else if (e.message === "Authorization header is malformed") {
-          res.status(401).json({ error: true, message: e.message });
-        }
-        else {
-          res.status(401).json({ error: true, message: "Invalid JWT token" });
-        }
-        return;
-      }
-
-      const queryUser = req.db.from("users").select("email", "firstName", "lastName", "dob", "address").where("email", "=", email);
-      queryUser.update({
-        firstName: firstName,
-        lastName: lastName,
-        dob: testedDob,
-        address: address
-      })
-        .then(() => {
-          return req.db.from("users").select("email", "firstName", "lastName", "dob", "address").where("email", "=", email);
-        })
-        .then((user) => {
-          res.status(200).json(user[0]);
-        })
-    } else {
-      res.status(401).json({ error: true, message: "Authorization header is malformed" });
+    if (req.email !== email) {
+      res.status(403).json({ error: true, message: "Forbidden" });
+      return;
     }
+
+    const queryUser = req.db.from("users").select("email", "firstName", "lastName", "dob", "address").where("email", "=", email);
+    queryUser.update({
+      firstName: firstName,
+      lastName: lastName,
+      dob: testedDob,
+      address: address
+    })
+      .then(() => {
+        return req.db.from("users").select("email", "firstName", "lastName", "dob", "address").where("email", "=", email);
+      })
+      .then((user) => {
+        res.status(200).json(user[0]);
+      })
   }
 });
 
