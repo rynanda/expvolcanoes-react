@@ -1,17 +1,12 @@
 var express = require('express');
 var router = express.Router();
 
-
 const swaggerUI = require('swagger-ui-express');
 const swaggerDocument = require('../docs/openapi.json');
 const jwt = require('jsonwebtoken');
 
-/* GET home page. */
-// router.get('/', function (req, res, next) {
-//   res.render('index', { title: 'Express' });
-// });
-
-router.get('/', swaggerUI.serve, swaggerUI.setup(swaggerDocument));
+router.use('/', swaggerUI.serve);
+router.get('/', swaggerUI.setup(swaggerDocument));
 
 router.get('/countries', function (req, res, next) {
   req.db
