@@ -116,7 +116,109 @@ router.get('/volcano/:id', function (req, res, next) {
       res.status(401).json({ error: true, message: "Authorization header is malformed" });
     }
   }
-})
+});
+
+router.get('/volcano/:id/ratings', function (req, res, next) {
+  const id = req.params.id;
+  const queries = Object.keys(req.query);
+
+  if (queries.length === 0) {
+
+    const queryVolcano = req.db.from("data").select("ratings").where("id", "=", id);
+
+    queryVolcano.then(reviewsData => {
+      if (reviewsData.length === 0) {
+        res.status(404).json({ error: true, message: `Volcano with ID: ${req.params.id} not found.` });
+      } else {
+        const reviews = reviewsData[0].ratings;
+        if (!reviews) {
+          res.status(200).json({ averageRating: null, reviews: null });
+        } else {
+          const ratings = reviews.filter(review => review.rating).map(review => parseInt(review.rating));
+          const sumRatings = ratings.reduce((sum, a) => sum + a, 0); // https://stackoverflow.com/questions/1230233/how-to-find-the-sum-of-an-array-of-numbers
+          const averageRating = sumRatings / reviews.length;
+
+          const info = {
+            averageRating: averageRating,
+            reviews: reviews
+          }
+
+          res.status(200).json(info)
+        }
+      }
+    })
+  } else {
+    res.status(400).json({ error: true, message: "Invalid query parameters. Query parameters are not permitted." })
+  }
+});
+
+router.put('/volcano/:id/ratings', function (req, res, next) {
+  const id = req.params.id;
+  const rating = req.body.rating;
+  const comment = req.body.comment;
+  const queries = Object.keys(req.query);
+
+  if (!rating && !comment) {
+    res.status(400).json({ error: true, message: "Request body incomplete: Either rating or comment is required." });
+    return;
+  }
+
+  if ((rating < 0) || (rating > 5)) {
+    res.status(400).json({ error: true, message: "Request body invalid: Rating must be between 0 and 5 (inclusive)." });
+    return;
+  }
+
+  if (!req.headers.authorization) {
+    res.status(401).json({ error: true, message: "Authorization header ('Bearer token') not found" })
+  } else {
+    if (queries.length === 0) {
+      if (/^Bearer /.test(req.headers.authorization)) {
+        const token = req.headers.authorization.replace(/^Bearer /, "");
+
+        try {
+          jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+          if (e.name === "TokenExpiredError") {
+            res.status(401).json({ error: true, message: "JWT token has expired" });
+          } else {
+            res.status(401).json({ error: true, message: "Invalid JWT token" });
+          }
+          return;
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const email = decoded.email;
+
+        const newRating = {
+          date: new Date().toDateString(), // https://stackoverflow.com/questions/34722862/how-to-remove-time-part-from-date
+          email: email,
+          rating: rating,
+          comment: comment
+        }
+
+        const queryVolcano = req.db.from("data").where("id", "=", id);
+        queryVolcano.then(volcano => {
+          if (volcano.length === 0) {
+            throw new Error(`Volcano with ID: ${req.params.id} not found.`)
+          }
+          const currentRatings = !volcano[0].ratings ? [] : (volcano[0].ratings);
+          currentRatings.push(newRating);
+          return queryVolcano.update({ ratings: JSON.stringify(currentRatings) }).then(() => currentRatings);
+        }).then((ratings) => {
+          res.status(200).json(ratings);
+        }).catch((err) => {
+          if (err.message === `Volcano with ID: ${req.params.id} not found.`) {
+            res.status(404).json({ error: true, message: err.message })
+          }
+        });
+      } else {
+        res.status(401).json({ error: true, message: "Authorization header is malformed" });
+      }
+    } else {
+      res.status(400).json({ error: true, message: "Invalid query parameters. Query parameters are not permitted." })
+    }
+  }
+});
 
 router.get('/me', function (req, res, next) {
   res.status(200).json({
