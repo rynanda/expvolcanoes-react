@@ -151,8 +151,8 @@ router.put('/volcano/:id/ratings', authorization, function (req, res, next) {
     return;
   }
 
-  if ((rating < 0) || (rating > 5)) {
-    res.status(400).json({ error: true, message: "Request body invalid: Rating must be between 0 and 5 (inclusive)." });
+  if ((rating < 0) || (rating > 5) || isNaN(rating)) {
+    res.status(400).json({ error: true, message: "Request body invalid: Rating must be a number between 0 and 5 (inclusive)." });
     return;
   }
 
