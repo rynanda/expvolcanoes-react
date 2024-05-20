@@ -79,7 +79,7 @@
           }
         }
       },
-      "InvalidParametersVolcano": {
+      "InvalidParameters": {
         "type": "object",
         "properties": {
           "error": {
@@ -237,13 +237,41 @@
             "example": "Invalid input: dob must be a date in the past."
           }
         }
+      },
+      "InvalidRatingsBodyFormat": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "boolean",
+            "example": "true"
+          },
+          "message": {
+            "type": "string",
+            "example": "Request body incomplete: Either rating or comment is required."
+          }
+        }
+      },
+      "InvalidRatingFormat": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "boolean",
+            "example": "true"
+          },
+          "message": {
+            "type": "string",
+            "example": "Request body invalid: Rating must be a number between 0 and 5 (inclusive)."
+          }
+        }
       }
     }
   },
   "paths": {
     "/countries": {
       "get": {
-        "tags": ["Data"],
+        "tags": [
+          "Data"
+        ],
         "description": "Returns a list of all countries that are associated with one or more volcanoes, ordered alphabetically.",
         "responses": {
           "200": {
@@ -291,7 +319,9 @@
     },
     "/volcanoes": {
       "get": {
-        "tags": ["Data"],
+        "tags": [
+          "Data"
+        ],
         "description": "Returns a list of volcanoes that are associated with the queried country. The country query parameter is required. The list can optionally be filtered by using the populatedWithin query parameter. This will return a filtered list of volcanoes that have at least one person living within the provided radius.",
         "parameters": [
           {
@@ -310,7 +340,12 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": ["5km", "10km", "30km", "100km"]
+              "enum": [
+                "5km",
+                "10km",
+                "30km",
+                "100km"
+              ]
             }
           }
         ],
@@ -375,7 +410,9 @@
     },
     "/volcano/{id}": {
       "get": {
-        "tags": ["Data"],
+        "tags": [
+          "Data"
+        ],
         "description": "Returns an object containing data for the queried volcano. If a valid JWT token is sent in the header of the request, population data for 5km, 10km, 30km and 100km is also provided. To test this using Swagger, click the green 'Authorize' button at the top of this page to enter your JWT token. A JWT token can be obtained by logging in. The path parameter (id) is required.",
         "parameters": [
           {
@@ -469,7 +506,7 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/InvalidParametersVolcano"
+                      "$ref": "#/components/schemas/InvalidParameters"
                     }
                   ]
                 }
@@ -515,7 +552,9 @@
     },
     "/user/register": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "description": "Creates a new user account. A request body containing the user to be registered must be sent.",
         "requestBody": {
           "description": "An object containing the email and password of the user to be registered.",
@@ -601,7 +640,9 @@
     "/user/login": {
       "post": {
         "description": "Log in to an existing user account. A request body containing the user credentials must be sent.",
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "requestBody": {
           "description": "The credentials of the user to log in.",
           "required": true,
@@ -691,6 +732,169 @@
         }
       }
     },
+    "/volcano/{id}/ratings": {
+      "get": {
+        "tags": [
+          "Ratings"
+        ],
+        "description": "Placeholder",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the volcano",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "averageRating": {
+                      "type": "number",
+                      "example": 3
+                    },
+                    "reviews": {
+                      "type": "array",
+                      "example": [
+                        {
+                          "date": "Sun May 19 2024",
+                          "email": "mike@example.com",
+                          "rating": "5",
+                          "comment": "Incredible view!"
+                        },
+                        {
+                          "date": "Sun May 19 2024",
+                          "email": "j.doe@example.com",
+                          "rating": "1",
+                          "comment": "Terrible view!"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Volcano ID not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/VolcanoIdNotFound"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "boolean",
+                      "example": "true"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid query parameters. Query parameters are not permitted."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Ratings"
+        ],
+        "description": "Placeholder",
+        "requestBody": {
+          "description": "",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rating": {
+                    "type": "number",
+                    "example": "5"
+                  },
+                  "comment": {
+                    "type": "string",
+                    "example": "Breathtaking views!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the volcano",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "example": [
+                    {
+                      "date": "Sun May 19 2024",
+                      "email": "mike@example.com",
+                      "rating": "5",
+                      "comment": "Incredible view!"
+                    },
+                    {
+                      "date": "Sun May 19 2024",
+                      "email": "j.doe@example.com",
+                      "rating": "1",
+                      "comment": "Terrible view!"
+                    },
+                    {
+                      "date": "Mon May 20 2024",
+                      "email": "ryan@example.com",
+                      "rating": "5",
+                      "comment": "Breathtaking views!"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/user/{email}/profile": {
       "get": {
         "description": "Returns an object containing a user's profile information. The path parameter (email) is required and must be an email that has been registered. This route returns additional information if the user is authenticated. To be authenticated, a valid JWT token must be sent in the header of the request. To test this using Swagger, click the green 'Authorize' button at the top of this page to enter your JWT token. A JWT token can be obtained by logging in.",
@@ -710,7 +914,9 @@
             "bearerAuth": []
           }
         ],
-        "tags": ["Profile"],
+        "tags": [
+          "Profile"
+        ],
         "responses": {
           "200": {
             "description": "An object containing email, firstName, lastName, address (authenticated only) and dob (authenticated only) properties. An example object for an authenticated request is shown below. If no profile information has been entered for the user via the profile PUT request route, all returned values except email are expected to be null. Click on 'Schema' below to see a response example for an unauthenticated request.",
@@ -818,7 +1024,9 @@
             "bearerAuth": []
           }
         ],
-        "tags": ["Profile"],
+        "tags": [
+          "Profile"
+        ],
         "responses": {
           "200": {
             "description": "An object containing the user's updated profile information. The object should contain email, firstName, lastName, dob and address properties. An example object is shown below.",
@@ -901,7 +1109,9 @@
     },
     "/me": {
       "get": {
-        "tags": ["Administration"],
+        "tags": [
+          "Administration"
+        ],
         "description": "A route to assist in automating some of the marking process for this assignment.",
         "responses": {
           "200": {
