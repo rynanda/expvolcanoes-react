@@ -140,18 +140,16 @@ router.get('/volcano/:id/ratings', function (req, res, next) {
   }
 });
 
-router.put('/volcano/:id/ratings', authorization, function (req, res, next) {
+router.post('/volcano/:id/ratings', authorization, function (req, res, next) {
   const id = req.params.id;
   const rating = req.body.rating;
   const comment = req.body.comment;
   const queries = Object.keys(req.query);
 
-  if (!rating && !comment) {
-    res.status(400).json({ error: true, message: "Request body incomplete: Either rating or comment is required." });
+  if (!rating) {
+    res.status(400).json({ error: true, message: "Request body incomplete: Rating is required." });
     return;
-  }
-
-  if ((rating < 0) || (rating > 5) || isNaN(rating)) {
+  } else if ((rating < 0) || (rating > 5) || isNaN(rating)) {
     res.status(400).json({ error: true, message: "Request body invalid: Rating must be a number between 0 and 5 (inclusive)." });
     return;
   }
