@@ -8,8 +8,6 @@ require("dotenv").config();
 const options = require("./knexfile.js");
 const knex = require("knex")(options);
 const cors = require('cors');
-// const swaggerUI = require('swagger-ui-express');
-// const swaggerDocument = require('./docs/openapi.json');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/user');
@@ -43,8 +41,6 @@ app.get("/knex", function (req, res, next) {
 
   res.send("Version Logged succesfully");
 })
-
-// app.use('/docs', swaggerUI.serve, swaggerUI.setup(swaggerDocument));
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
