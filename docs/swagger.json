@@ -828,9 +828,9 @@
         "tags": [
           "Ratings"
         ],
-        "description": "Rate and optionally comment on the queried volcano. The path parameter (id) is required. A request body containing a rating (1-5, inclusive) must be sent. Including a comment in the request body is optional. The user must be authenticated to review a volcano. To be authenticated, a valid JWT token must be sent in the header of the request. To test this using Swagger, click the green 'Authorize' button at the top of this page to enter your JWT token. A JWT token can be obtained by logging in.",
+        "description": "Rate and optionally comment on the queried volcano. The path parameter (id) is required. A request body containing a rating (0-5, inclusive) must be sent. Including a comment in the request body is optional. The user must be authenticated to review a volcano. To be authenticated, a valid JWT token must be sent in the header of the request. To test this using Swagger, click the green 'Authorize' button at the top of this page to enter your JWT token. A JWT token can be obtained by logging in.",
         "requestBody": {
-          "description": "An object containing a rating (required) and comment (optional). Ratings must be between 1-5 (inclusive).",
+          "description": "An object containing a rating (required) and comment (optional). Ratings must be between 0-5 (inclusive).",
           "required": true,
           "content": {
             "application/json": {
